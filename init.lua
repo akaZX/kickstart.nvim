@@ -1,4 +1,4 @@
---[[
+[
 
 =====================================================================
 ==================== READ THIS BEFORE CONTINUING ====================
@@ -91,7 +91,7 @@ vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
 -- Set to true if you have a Nerd Font installed and selected in the terminal
-vim.g.have_nerd_font = false
+vim.g.have_nerd_font = true
 
 -- [[ Setting options ]]
 -- See `:help vim.opt`
@@ -201,6 +201,29 @@ vim.api.nvim_create_autocmd('TextYankPost', {
   group = vim.api.nvim_create_augroup('kickstart-highlight-yank', { clear = true }),
   callback = function()
     vim.highlight.on_yank()
+  end,
+})
+
+-- Autocommand to configure clangd for Vxxx repo
+local group = vim.api.nvim_create_augroup('VxxxC++', { clear = true })
+vim.api.nvim_create_autocmd('BufEnter', {
+  group = group,
+  pattern = '*',
+  callback = function()
+    local cwd = vim.fn.getcwd()
+    local project_root = 'C:\\Develop\\Develop\\git\\vfamecd'
+    if cwd:sub(1, #project_root) == project_root then
+      -- Configure clangd for this specific directory
+      require('lspconfig').clangd.setup {
+        cmd = {
+          'C:\\Develop\\.conan\\data\\llvm\\3.0.0+v15.0.6\\_\\_\\package\\456f15897172eef340fcbac8a70811f2beb26a93\\llvm\\bin\\clangd.exe',
+          '--clang-tidy',
+          '--log=verbose',
+          '--compile-commands-dir=' .. project_root,
+        },
+        init_options = { fallbackFlags = { '-std=c++17' } },
+      }
+    end
   end,
 })
 
@@ -343,7 +366,7 @@ require('lazy').setup({
 
         -- `build` is used to run some command when the plugin is installed/updated.
         -- This is only run then, not every time Neovim starts up.
-        build = 'make',
+        build = 'cmake -S. -Bbuild -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release && cmake --install build --prefix build',
 
         -- `cond` is a condition used to determine whether this plugin should be
         -- installed and loaded.
@@ -518,6 +541,9 @@ require('lazy').setup({
           -- Find references for the word under your cursor.
           map('gr', require('telescope.builtin').lsp_references, '[G]oto [R]eferences')
 
+          -- Lets Switch between header/source, uses clangd functionality
+          vim.keymap.set('n', 'gh', ':ClangdSwitchSourceHeader<CR>', { noremap = true, silent = true, desc = '[G]oto [H]eader/Source' })
+
           -- Jump to the implementation of the word under your cursor.
           --  Useful when your language has ways of declaring types without an actual implementation.
           map('gI', require('telescope.builtin').lsp_implementations, '[G]oto [I]mplementation')
@@ -614,7 +640,7 @@ require('lazy').setup({
       --  - settings (table): Override the default settings passed when initializing the server.
       --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
       local servers = {
-        -- clangd = {},
+        clangd = {},
         -- gopls = {},
         -- pyright = {},
         -- rust_analyzer = {},
